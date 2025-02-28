@@ -1,18 +1,4 @@
-#  RSS to Telegram Bot
-#  Copyright (C) 2021-2024  Rongrong <i@rong.moe>
-#
-#  This program is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU Affero General Public License as
-#  published by the Free Software Foundation, either version 3 of the
-#  License, or (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-#
-#  You should have received a copy of the GNU Affero General Public License
-#  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 
 from __future__ import annotations
 from typing import Union, Optional, Final
@@ -96,24 +82,33 @@ class Monitor(Singleton):
 
         return db_feeds
 
-    def _on_subtask_canceled(self, err: BaseException, feed: db.Feed):
+    def _on_subtask_canceled(self, err: BaseException, feed: db.Feed, *_):
         self._stat.cancelled()
         logger.error(f'Monitoring subtask failed due to CancelledError: {feed.id}: {feed.link}', exc_info=err)
 
-    def _on_subtask_unknown_error(self, err: BaseException, feed: db.Feed):
+    def _on_subtask_unknown_error(self, err: BaseException, feed: db.Feed, *_):
         self._stat.unknown_error()
         logger.error(f'Monitoring subtask failed due to an unknown error: {feed.id}: {feed.link}', exc_info=err)
 
-    def _on_subtask_timeout(self, err: BaseException, feed: db.Feed):
+    def _on_subtask_timeout(self, err: BaseException, feed: db.Feed, *_):
         self._stat.timeout()
         logger.error(f'Monitoring subtask timed out after {TIMEOUT}s: {feed.id}: {feed.link}', exc_info=err)
 
-    def _on_subtask_timeout_unknown_error(self, err: BaseException, feed: db.Feed):
+    def _on_subtask_timeout_unknown_error(self, err: BaseException, feed: db.Feed, *_):
         self._stat.timeout_unknown_error()
         logger.error(
             f'Monitoring subtask timed out after {TIMEOUT}s and caused an unknown error: {feed.id}: {feed.link}',
             exc_info=err
         )
+
+    async def _do_monitor_subtask(self, feed: db.Feed, now: datetime):
+        self._subtask_defer_map[feed.id] |= TaskState.IN_PROGRESS
+        self._stat.start()
+        try:
+            await self._do_monitor_a_feed(feed, now)
+        finally:
+            self._erase_state_for_feed_id(feed.id, TaskState.IN_PROGRESS)
+            self._stat.finish()
 
     # In the foreseeable future, we may limit the number of concurrent monitoring tasks and use
     # helpers.queue.QueuedDecorator(PriorityQueue) to prioritize some jobs.
@@ -155,15 +150,6 @@ class Monitor(Singleton):
         logger.debug(f'Finished monitoring {feed_count} feeds (handle: {handle_id}): {description}')
 
     _do_monitor_task_bg_sync = _do_monitor_task.bg_sync
-
-    async def _do_monitor_subtask(self, feed: db.Feed, now: datetime):
-        self._subtask_defer_map[feed.id] |= TaskState.IN_PROGRESS
-        self._stat.start()
-        try:
-            await self._do_monitor_a_feed(feed, now)
-        finally:
-            self._erase_state_for_feed_id(feed.id, TaskState.IN_PROGRESS)
-            self._stat.finish()
 
     def _lock_feed_id(self, feed_id: int):
         if not self._lock_up_period:  # lock disabled
