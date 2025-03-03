@@ -950,7 +950,7 @@ class Media:
             html_nodes.extend((link, Br()))
         if html_nodes:
             html_nodes.pop()
-            html_nodes.insert(0, Text('Invalid media:\n'))
+            html_nodes.insert(0, Text('Source media:\n'))
             invalid_html_node = HtmlTree(html_nodes)
 
         return ret, invalid_html_node
