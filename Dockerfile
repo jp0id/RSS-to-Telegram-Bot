@@ -92,7 +92,7 @@ RUN \
         echo "dirty-build@$(date -Iseconds)" | tee .version; else echo "build@$(date -Iseconds)" | tee -a .version; \
     fi && \
     mkdir /app-minimal && \
-    cp -r .version LICENSE src telegramRSSbot.py /app-minimal && \
+    cp -aL .version LICENSE src telegramRSSbot.py scripts/health_check.py /app-minimal && \
     cd / && \
     rm -rf /app && \
     rm -f /app-minimal/*.md && \
@@ -114,16 +114,27 @@ RUN \
     && \
     rm -rf /var/lib/apt/lists/*
 
+# PORT: default port for health check, can be safely overridden.
+#   Note: We don't expose this port in the Dockerfile. If users want to expose
+#   this port, they should do so in their docker-compose.yml or docker run
+#   command.
+# PYTHONMALLOC: enable pymalloc together with jemalloc, see also
+#   https://lirias.kuleuven.be/retrieve/695404
+#   https://dl.acm.org/doi/abs/10.1007/978-3-031-15074-6_14
+#   Note: Do not compare pymalloc_jemalloc to the baseline (i.e., pymalloc),
+#     compare pymalloc_jemalloc to jemalloc (i.e., jemalloc+malloc) instead.
+# LD_PRELOAD: enable jemalloc to prevent memory fragmentation issues.
+# MALLOC_CONF: jemalloc tuning, see also
+#   https://github.com/home-assistant/core/pull/70899
+#   https://github.com/jemalloc/jemalloc/blob/5.2.1/TUNING.md
 ENV \
+    PORT=18848 \
     PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     RAPIDFUZZ_IMPLEMENTATION=cpp \
-    PYTHONMALLOC=malloc \
+    PYTHONMALLOC=pymalloc \
     LD_PRELOAD=libjemalloc.so.2 \
     MALLOC_CONF=background_thread:true,max_background_threads:1,metadata_thp:auto,dirty_decay_ms:80000,muzzy_decay_ms:80000
-    # jemalloc tuning, Ref:
-    # https://github.com/home-assistant/core/pull/70899
-    # https://github.com/jemalloc/jemalloc/blob/5.2.1/TUNING.md
 
 COPY --from=mimalloc-builder /mimalloc/build/lib /usr/local/lib
 COPY --from=dep-builder /opt/venv /opt/venv
@@ -131,5 +142,8 @@ COPY --from=app-builder /app-minimal /app
 
 # verify cryptg installation
 RUN python -c 'import logging; logging.basicConfig(level=logging.DEBUG); import telethon; import cryptg'
+
+HEALTHCHECK --start-period=1m \
+    CMD ["python", "-u", "health_check.py"]
 
 ENTRYPOINT ["python", "-u", "telegramRSSbot.py"]
