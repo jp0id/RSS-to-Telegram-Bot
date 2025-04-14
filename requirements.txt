@@ -6,13 +6,13 @@ aiographfix==0.2.2
 # feed parsing
 feedparser==6.0.11  # feedparser@git+https://github.com/Rongronggg9/feedparser.git@develop
 listparser[lxml]==0.20
-pillow==11.1.0
+pillow==11.2.1
 beautifulsoup4==4.12.3
-lxml==5.3.1
-rapidfuzz==3.12.2
+lxml==5.3.2
+rapidfuzz==3.13.0
 emoji==2.14.1
-minify-html==0.15.0
-minify-html-onepass==0.15.0
+minify-html==0.16.4
+minify-html-onepass==0.16.4
 matplotlib==3.9.4
 
 # db
@@ -21,22 +21,22 @@ tortoise-orm[accel]==0.24.2
 aerich==0.8.1
 
 # network
-aiohttp[speedups]==3.11.14
+aiohttp[speedups]==3.11.16
 aiohttp-socks==0.10.1
 aiohttp-retry==2.9.1
 python-socks[asyncio]==2.7.1
 dnspython[idna]==2.7.0
 
 # utils
-yarl==1.18.3
-propcache==0.3.0
+yarl==1.19.0
+propcache==0.3.1
 colorlog==6.9.0
 APScheduler==3.11.0
-python-dotenv==1.0.1
-multidict==6.2.0
+python-dotenv==1.1.0
+multidict==6.4.3
 asyncstdlib==3.13.1
 cachetools==5.5.2
 CJKwrap==2.2
-typing-extensions==4.12.2
+typing-extensions==4.13.2
 uvloop==0.21.0; sys_platform!='win32' and sys_platform!='cygwin' and sys_platform!='cli'
 isal==1.7.2; platform_machine=='x86_64' or platform_machine=='AMD64' or platform_machine=='aarch64'
